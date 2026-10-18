@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<title>뭐 먹지?</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #fdf6ec;
+    --card: #fffdf9;
+    --accent: #e07a4f;
+    --accent-dark: #c4623a;
+    --sub: #8a9a5b;
+    --text: #4a3b32;
+    --muted: #9b8b7e;
+    --line: #f0e3d3;
+  }
+  /* 다크모드: 따뜻한 밤 톤 */
+  [data-app-theme="dark"] {
+    --bg: #2b2420;
+    --card: #3a322b;
+    --accent: #e88a5c;
+    --accent-dark: #f2a172;
+    --sub: #a9b67f;
+    --text: #f2e8dd;
+    --muted: #a89a8a;
+    --line: #4d4338;
+  }
+  /* 다크모드: 연한 강조 배경들을 어두운 톤으로 */
+  [data-app-theme="dark"] .chip.active,
+  [data-app-theme="dark"] .candidate.selected,
+  [data-app-theme="dark"] .cal-day.selected,
+  [data-app-theme="dark"] .custom input.filled { background: #4d3d30; }
+  [data-app-theme="dark"] .chip:hover,
+  [data-app-theme="dark"] .candidate:hover,
+  [data-app-theme="dark"] .cal-day:hover,
+  [data-app-theme="dark"] .btn-month:hover,
+  [data-app-theme="dark"] .btn-add-menu:hover { background: #453729; }
+  [data-app-theme="dark"] .candidate .kind,
+  [data-app-theme="dark"] .btn-month,
+  [data-app-theme="dark"] .btn-add-menu { background: #453729; color: var(--text); }
+  [data-app-theme="dark"] .candidate.selected .kind { background: #5a4636; }
+  [data-app-theme="dark"] .btn-done { background: #46503c; color: #e3ebcf; }
+  [data-app-theme="dark"] .btn-done:hover { background: #525c46; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+  }
+  .wrap { width: 100%; max-width: 440px; }
+  header { text-align: center; margin-bottom: 24px; position: relative; }
+  header h1 { font-size: 26px; font-weight: 800; }
+  header p { color: var(--muted); margin-top: 6px; font-size: 15px; }
+  .theme-toggle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    font-size: 19px;
+    border-radius: 50%;
+    background: var(--card);
+    border: 1px solid var(--line);
+    box-shadow: 0 2px 8px rgba(160, 110, 70, 0.12);
+    cursor: pointer;
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: 20px;
+    box-shadow: 0 6px 24px rgba(160, 110, 70, 0.12);
+    padding: 28px 24px;
+    margin-bottom: 20px;
+  }
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .chip {
+    font-size: 14px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: var(--card);
+    color: var(--muted);
+    border: 2px solid var(--line);
+  }
+  .chip:hover { border-color: #f2c7b0; color: var(--text); }
+  .chip.active {
+    background: #fdeee5;
+    border-color: var(--accent);
+    color: var(--accent-dark);
+  }
+
+  .result {
+    text-align: center;
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed var(--line);
+    border-radius: 16px;
+    margin-bottom: 20px;
+    padding: 20px;
+  }
+  .result .emoji { font-size: 44px; }
+  .result .menu {
+    font-size: 36px;
+    font-weight: 800;
+    margin-top: 8px;
+    color: var(--accent-dark);
+  }
+  .result .placeholder { color: var(--muted); font-size: 16px; }
+  .result .hint { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+  .candidates { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+  .candidate {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    font-size: 20px;
+    font-weight: 800;
+    text-align: left;
+    padding: 12px 16px;
+    background: var(--card);
+    color: var(--text);
+    border: 2px solid var(--line);
+  }
+  .candidate:hover { border-color: #f2c7b0; }
+  .candidate .emoji { font-size: 26px; }
+  .candidate .kind {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #f7eee4;
+    color: var(--muted);
+  }
+  .candidate.selected .kind { background: #fbe0d2; color: var(--accent-dark); }
+  .candidate .check { margin-left: auto; font-size: 18px; visibility: hidden; }
+  .candidate.selected {
+    background: #fdeee5;
+    border-color: var(--accent);
+    color: var(--accent-dark);
+  }
+  .candidate.selected .check { visibility: visible; }
+
+  .custom { margin-bottom: 20px; }
+  .custom label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+  .custom input {
+    width: 100%;
+    font-family: inherit;
+    font-size: 16px;
+    padding: 13px 14px;
+    border: 2px solid var(--line);
+    border-radius: 14px;
+    background: var(--card);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .custom-row { display: flex; gap: 8px; align-items: stretch; }
+  .custom-row input { flex: 1; min-width: 0; }
+  .btn-add-menu {
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 0 12px;
+    background: #f7eee4;
+    color: var(--accent-dark);
+    border-radius: 14px;
+  }
+  .btn-add-menu:hover { background: #fbe0d2; }
+  .custom input:focus { border-color: var(--accent); }
+  .custom input.filled { border-color: var(--accent); background: #fdeee5; }
+  .pop { animation: pop 0.35s ease; }
+  @keyframes pop {
+    0% { transform: scale(0.7); opacity: 0; }
+    70% { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); }
+  }
+
+  .buttons { display: flex; flex-direction: column; gap: 10px; }
+  button {
+    font-family: inherit;
+    font-size: 17px;
+    font-weight: 700;
+    border: none;
+    border-radius: 14px;
+    padding: 15px;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.2s, opacity 0.2s;
+  }
+  button:active { transform: scale(0.97); }
+  .btn-pick { background: var(--accent); color: #fff; }
+  .btn-pick:hover { background: var(--accent-dark); }
+  .btn-done { background: #eef2e2; color: #5d6b35; }
+  .btn-done:hover { background: #e3e9cf; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .toast {
+    text-align: center;
+    color: var(--sub);
+    font-size: 14px;
+    height: 20px;
+    margin-top: 10px;
+    transition: opacity 0.3s;
+  }
+
+  .history h2 {
+    font-size: 17px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .btn-clear {
+    font-size: 13px;
+    font-weight: 500;
+    padding: 4px 10px;
+    background: transparent;
+    color: var(--muted);
+    border-radius: 8px;
+  }
+  .btn-clear:hover { background: var(--line); }
+
+  /* ===== 달력 ===== */
+  .cal-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .cal-nav .month { font-size: 16px; font-weight: 800; }
+  .btn-month {
+    font-size: 16px;
+    padding: 4px 12px;
+    background: #f7eee4;
+    color: var(--accent-dark);
+    border-radius: 10px;
+  }
+  .btn-month:hover { background: #fbe0d2; }
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .cal-week {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    padding: 4px 0;
+  }
+  .cal-week.sun { color: #d9785a; }
+  .cal-week.sat { color: #7a93b0; }
+  .cal-day {
+    position: relative;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 0;
+    background: transparent;
+    color: var(--text);
+    border: 2px solid transparent;
+    border-radius: 12px;
+  }
+  .cal-day:hover { background: #f7eee4; }
+  .cal-day.today { border-color: var(--accent); color: var(--accent-dark); font-weight: 800; }
+  .cal-day.selected { background: #fdeee5; border-color: var(--accent); }
+  .cal-day .dot {
+    position: absolute;
+    bottom: 5px;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    margin-left: -2.5px;
+    border-radius: 50%;
+    background: var(--sub);
+  }
+
+  .day-panel {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+  }
+  .day-panel h3 { font-size: 15px; margin-bottom: 8px; }
+  .day-panel ul { list-style: none; }
+  .day-panel li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 4px;
+    border-bottom: 1px solid var(--line);
+    font-size: 15px;
+  }
+  .day-panel li:last-child { border-bottom: none; }
+  .day-panel li .text { flex: 1; word-break: break-all; }
+  .day-panel .empty { color: var(--muted); justify-content: center; font-size: 14px; }
+  .btn-del {
+    font-size: 15px;
+    padding: 2px 8px;
+    background: transparent;
+    color: var(--muted);
+    border-radius: 8px;
+  }
+  .btn-del:hover { background: var(--line); color: var(--accent-dark); }
+  .memo-row { display: flex; gap: 8px; margin-top: 10px; }
+  .memo-row input {
+    flex: 1;
+    min-width: 0;
+    font-family: inherit;
+    font-size: 15px;
+    padding: 10px 12px;
+    border: 2px solid var(--line);
+    border-radius: 12px;
+    background: var(--card);
+    color: var(--text);
+    outline: none;
+  }
+  .memo-row input:focus { border-color: var(--accent); }
+  .btn-memo {
+    font-size: 14px;
+    padding: 0 16px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 12px;
+  }
+  .btn-memo:hover { background: var(--accent-dark); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <button type="button" class="theme-toggle" id="themeToggle" aria-label="다크모드로 전환">🌙</button>
+    <h1>🍽️ 뭐 먹지?</h1>
+    <p>고민은 그만, 버튼 한 번이면 끝!</p>
+  </header>
+
+  <section class="card">
+    <div class="filters" id="filters" role="group" aria-label="메뉴 필터"></div>
+    <div class="result" id="result">
+      <div class="placeholder">아래 버튼을 눌러 오늘의 메뉴 후보를 뽑아보세요</div>
+    </div>
+    <div class="custom">
+      <label for="customInput">✏️ 직접 입력</label>
+      <div class="custom-row">
+        <input type="text" id="customInput" maxlength="30" placeholder="예) 떡볶이, 냉면, 카레라이스" autocomplete="off">
+        <button type="button" class="btn-add-menu" id="addMenuBtn">+ 목록에 추가</button>
+      </div>
+    </div>
+    <div class="buttons">
+      <button class="btn-pick" id="pickBtn">오늘 뭐 먹지? 🎲</button>
+      <button class="btn-done" id="doneBtn" disabled>오늘 이거 먹었어 ✅</button>
+    </div>
+    <div class="toast" id="toast"></div>
+  </section>
+
+  <section class="card history">
+    <h2>
+      <span>📒 먹은 기록</span>
+      <span class="clear-group">
+        <button class="btn-clear" id="clearBtn">기록 지우기</button>
+        <button class="btn-clear" id="clearMemoBtn">메모 지우기</button>
+      </span>
+    </h2>
+    <div class="cal-nav">
+      <button type="button" class="btn-month" id="prevMonth" aria-label="이전 달">&lt;</button>
+      <span class="month" id="monthLabel"></span>
+      <button type="button" class="btn-month" id="nextMonth" aria-label="다음 달">&gt;</button>
+    </div>
+    <div class="cal-grid" id="calendar"></div>
+    <div class="day-panel" id="dayPanel" hidden></div>
+  </section>
+</div>
+
+<script>
+  // ===== 메뉴 목록 =====
+  // 여기 배열만 고치면 메뉴가 바뀝니다. 한 줄에 메뉴 하나씩, 이름(name)과 태그(tags)를 적으세요.
+  // 예) { name: "잡채", tags: ["한식", "집밥", "아이"] },
+  // tags에 쓸 수 있는 값:
+  //   음식 종류: 한식, 중식, 양식, 일식, 분식 (후보 버튼에 꼬리표로 표시)
+  //   먹는 방식: 집밥, 배달·외식
+  //   상황 (복수 가능, 필터 칩과 연결): 아이 (맵지 않고 뼈 없고 부드러워 3살도 OK), 든든, 가벼움, 매운맛
+  const MENUS = [
+    // --- 한식 메인 ---
+    { name: "김치찌개", tags: ["한식", "집밥", "든든", "매운맛"] },
+    { name: "된장찌개", tags: ["한식", "집밥", "아이", "가벼움"] },
+    { name: "제육볶음", tags: ["한식", "집밥", "든든", "매운맛"] },
+    { name: "불고기", tags: ["한식", "집밥", "아이", "든든"] },
+    { name: "비빔밥", tags: ["한식", "집밥", "든든"] },
+    { name: "김치볶음밥", tags: ["한식", "집밥", "든든", "매운맛"] },
+    { name: "닭볶음탕", tags: ["한식", "집밥", "든든", "매운맛"] },
+    { name: "순두부찌개", tags: ["한식", "집밥", "매운맛"] },
+    { name: "고등어구이", tags: ["한식", "집밥", "가벼움"] },
+    { name: "잡채", tags: ["한식", "집밥", "아이"] },
+    { name: "미역국", tags: ["한식", "집밥", "아이", "가벼움"] },
+    { name: "돼지김치찜", tags: ["한식", "집밥", "든든", "매운맛"] },
+    { name: "닭갈비", tags: ["한식", "집밥", "든든", "매운맛"] },
+    { name: "오징어볶음", tags: ["한식", "집밥", "든든", "매운맛"] },
+    { name: "갈비찜", tags: ["한식", "집밥", "든든"] },
+    { name: "삼계탕", tags: ["한식", "집밥", "든든"] },
+    { name: "부대찌개", tags: ["한식", "집밥", "든든", "매운맛"] },
+    { name: "감자탕", tags: ["한식", "집밥", "든든", "매운맛"] },
+    // 찌개 · 국 · 탕
+    { name: "청국장", tags: ["한식", "집밥", "든든"] },
+    { name: "동태찌개", tags: ["한식", "집밥", "매운맛"] },
+    { name: "고추장찌개", tags: ["한식", "집밥", "든든", "매운맛"] },
+    { name: "애호박찌개", tags: ["한식", "집밥", "가벼움"] },
+    { name: "콩비지찌개", tags: ["한식", "집밥", "아이", "든든"] },
+    { name: "콩나물국", tags: ["한식", "집밥", "아이", "가벼움"] },
+    { name: "소고기뭇국", tags: ["한식", "집밥", "아이", "가벼움"] },
+    { name: "북엇국", tags: ["한식", "집밥", "가벼움"] },
+    { name: "감자국", tags: ["한식", "집밥", "아이", "가벼움"] },
+    { name: "계란국", tags: ["한식", "집밥", "아이", "가벼움"] },
+    { name: "육개장", tags: ["한식", "집밥", "든든", "매운맛"] },
+    { name: "어묵탕", tags: ["한식", "집밥", "아이", "가벼움"] },
+    { name: "떡국", tags: ["한식", "집밥", "아이", "든든"] },
+    { name: "만둣국", tags: ["한식", "집밥", "아이", "든든"] },
+    { name: "갈비탕", tags: ["한식", "집밥", "든든"] },
+    { name: "닭곰탕", tags: ["한식", "집밥", "아이", "든든"] },
+    { name: "버섯전골", tags: ["한식", "집밥", "가벼움"] },
+    // 볶음 · 구이
+    { name: "쭈꾸미볶음", tags: ["한식", "집밥", "든든", "매운맛"] },
+    { name: "차돌 숙주볶음", tags: ["한식", "집밥", "든든"] },
+    { name: "두부김치", tags: ["한식", "집밥", "든든", "매운맛"] },
+    { name: "LA갈비", tags: ["한식", "집밥", "든든"] },
+    { name: "떡갈비", tags: ["한식", "집밥", "아이", "든든"] },
+    { name: "삼치구이", tags: ["한식", "집밥", "가벼움"] },
+    { name: "닭다리살 구이", tags: ["한식", "집밥", "아이", "든든"] },
+    { name: "훈제오리 구이", tags: ["한식", "집밥", "아이", "든든"] },
+    // 조림 · 찜
+    { name: "고등어조림", tags: ["한식", "집밥", "든든", "매운맛"] },
+    { name: "코다리조림", tags: ["한식", "집밥", "매운맛"] },
+    { name: "등갈비찜", tags: ["한식", "집밥", "든든"] },
+    { name: "닭봉조림", tags: ["한식", "집밥", "든든"] },
+    // 전
+    { name: "동그랑땡", tags: ["한식", "집밥", "아이"] },
+    { name: "부추전", tags: ["한식", "집밥", "가벼움"] },
+    { name: "애호박전", tags: ["한식", "집밥", "아이", "가벼움"] },
+    { name: "참치전", tags: ["한식", "집밥", "아이"] },
+    { name: "육전", tags: ["한식", "집밥", "아이", "든든"] },
+    // 밥 · 죽 · 면
+    { name: "콩나물밥", tags: ["한식", "집밥", "가벼움"] },
+    { name: "수제비", tags: ["한식", "집밥", "아이", "가벼움"] },
+    { name: "닭죽", tags: ["한식", "집밥", "아이", "가벼움"] },
+    { name: "간장계란밥", tags: ["한식", "집밥", "아이", "가벼움"] },
+    // --- 양식 (집밥) ---
+    { name: "토마토 파스타", tags: ["양식", "집밥", "아이", "가벼움"] },
+    { name: "크림 파스타", tags: ["양식", "집밥", "아이", "든든"] },
+    { name: "로제 파스타", tags: ["양식", "집밥", "아이", "든든"] },
+    { name: "오므라이스", tags: ["양식", "집밥", "아이", "든든"] },
+    { name: "함박스테이크", tags: ["양식", "집밥", "아이", "든든"] },
+    { name: "피자 토스트", tags: ["양식", "집밥", "아이"] },
+    { name: "알리오올리오", tags: ["양식", "집밥", "가벼움"] },
+    { name: "봉골레 파스타", tags: ["양식", "집밥", "가벼움"] },
+    { name: "바질 페스토 파스타", tags: ["양식", "집밥", "가벼움"] },
+    { name: "버섯 리조또", tags: ["양식", "집밥", "아이", "든든"] },
+    { name: "감자 그라탕", tags: ["양식", "집밥", "아이", "든든"] },
+    { name: "맥앤치즈", tags: ["양식", "집밥", "아이"] },
+    { name: "치킨 스테이크", tags: ["양식", "집밥", "아이", "든든"] },
+    { name: "소고기 스테이크", tags: ["양식", "집밥", "든든"] },
+    { name: "연어 스테이크", tags: ["양식", "집밥", "아이", "가벼움"] },
+    { name: "폭찹", tags: ["양식", "집밥", "든든"] },
+    { name: "미트볼", tags: ["양식", "집밥", "아이", "든든"] },
+    { name: "비프 스튜", tags: ["양식", "집밥", "아이", "든든"] },
+    { name: "크림수프", tags: ["양식", "집밥", "아이", "가벼움"] },
+    { name: "샌드위치", tags: ["양식", "집밥", "아이", "가벼움"] },
+    { name: "프렌치 토스트", tags: ["양식", "집밥", "아이", "가벼움"] },
+    { name: "닭가슴살 샐러드", tags: ["양식", "집밥", "가벼움"] },
+    { name: "감바스", tags: ["양식", "집밥", "가벼움"] },
+    { name: "퀘사디아", tags: ["양식", "집밥", "아이"] },
+    { name: "에그 인 헬", tags: ["양식", "집밥", "가벼움"] },
+    // --- 중식 (집밥) ---
+    { name: "마파두부", tags: ["중식", "집밥", "든든", "매운맛"] },
+    { name: "짜장밥", tags: ["중식", "집밥", "아이", "든든"] },
+    { name: "짬뽕", tags: ["중식", "집밥", "든든", "매운맛"] },
+    { name: "깐풍기", tags: ["중식", "집밥", "든든"] },
+    { name: "고추잡채덮밥", tags: ["중식", "집밥", "든든", "매운맛"] },
+    { name: "새우볶음밥", tags: ["중식", "집밥", "아이", "든든"] },
+    { name: "토마토 달걀볶음", tags: ["중식", "집밥", "아이", "가벼움"] },
+    { name: "유린기", tags: ["중식", "집밥", "든든"] },
+    { name: "칠리새우", tags: ["중식", "집밥", "아이", "든든"] },
+    { name: "캐슈넛 치킨볶음", tags: ["중식", "집밥", "아이", "든든"] },
+    { name: "청경채볶음", tags: ["중식", "집밥", "가벼움"] },
+    { name: "완탕면", tags: ["중식", "집밥", "아이", "가벼움"] },
+    { name: "샤오롱바오", tags: ["중식", "집밥", "아이"] },
+    // --- 일식 (집밥) ---
+    { name: "카레라이스", tags: ["일식", "집밥", "아이", "든든"] },
+    { name: "오야코동", tags: ["일식", "집밥", "아이", "든든"] },
+    { name: "가츠동", tags: ["일식", "집밥", "든든"] },
+    { name: "규동", tags: ["일식", "집밥", "아이", "든든"] },
+    { name: "유부우동", tags: ["일식", "집밥", "아이", "가벼움"] },
+    { name: "돈가스", tags: ["일식", "집밥", "든든"] },
+    { name: "볶음우동", tags: ["일식", "집밥", "든든"] },
+    { name: "하이라이스", tags: ["일식", "집밥", "아이", "든든"] },
+    { name: "연어덮밥", tags: ["일식", "집밥", "가벼움"] },
+    { name: "데리야끼 치킨덮밥", tags: ["일식", "집밥", "아이", "든든"] },
+    { name: "오코노미야키", tags: ["일식", "집밥", "든든"] },
+    { name: "메밀소바", tags: ["일식", "집밥", "가벼움"] },
+    { name: "새우튀김", tags: ["일식", "집밥", "아이"] },
+    { name: "고로케", tags: ["일식", "집밥", "아이"] },
+    { name: "밀푀유나베", tags: ["일식", "집밥", "아이", "가벼움"] },
+    { name: "스키야키", tags: ["일식", "집밥", "든든"] },
+    { name: "오차즈케", tags: ["일식", "집밥", "가벼움"] },
+    { name: "유부초밥", tags: ["일식", "집밥", "아이", "가벼움"] },
+    // --- 분식 (집밥) ---
+    { name: "김밥", tags: ["분식", "집밥", "아이", "가벼움"] },
+    { name: "라면", tags: ["분식", "집밥", "매운맛"] },
+    { name: "잔치국수", tags: ["분식", "집밥", "아이", "가벼움"] },
+    { name: "비빔국수", tags: ["분식", "집밥", "가벼움", "매운맛"] },
+    { name: "참치마요덮밥", tags: ["분식", "집밥", "아이", "든든"] },
+    { name: "주먹밥", tags: ["분식", "집밥", "아이", "가벼움"] },
+    { name: "토스트", tags: ["분식", "집밥", "아이", "가벼움"] },
+    // --- 사이드 / 반찬 ---
+    { name: "계란말이", tags: ["한식", "집밥", "아이", "가벼움"] },
+    { name: "계란찜", tags: ["한식", "집밥", "아이", "가벼움"] },
+    { name: "어묵볶음", tags: ["한식", "집밥", "아이"] },
+    { name: "감자조림", tags: ["한식", "집밥", "아이", "가벼움"] },
+    { name: "두부조림", tags: ["한식", "집밥", "가벼움"] },
+    { name: "김치전", tags: ["한식", "집밥", "매운맛"] },
+    { name: "해물파전", tags: ["한식", "집밥"] },
+    { name: "감자전", tags: ["한식", "집밥", "아이"] },
+    { name: "스팸구이", tags: ["한식", "집밥", "아이"] },
+    { name: "소시지 야채볶음", tags: ["한식", "집밥", "아이"] },
+    { name: "콘치즈", tags: ["한식", "집밥", "아이"] },
+    { name: "군만두", tags: ["한식", "집밥", "아이"] },
+    { name: "진미채볶음", tags: ["한식", "집밥", "매운맛"] },
+    { name: "감자채볶음", tags: ["한식", "집밥", "아이", "가벼움"] },
+    { name: "콩나물무침", tags: ["한식", "집밥", "가벼움"] },
+    { name: "장조림", tags: ["한식", "집밥", "아이"] },
+    { name: "연근조림", tags: ["한식", "집밥", "아이"] },
+    { name: "우엉조림", tags: ["한식", "집밥", "아이"] },
+    { name: "오이무침", tags: ["한식", "집밥", "가벼움", "매운맛"] },
+    { name: "버섯볶음", tags: ["한식", "집밥", "아이", "가벼움"] },
+    { name: "숙주나물", tags: ["한식", "집밥", "가벼움"] },
+    { name: "무생채", tags: ["한식", "집밥", "가벼움", "매운맛"] },
+    { name: "가지볶음", tags: ["한식", "집밥", "가벼움"] },
+    { name: "미역줄기볶음", tags: ["한식", "집밥", "가벼움"] },
+    { name: "도토리묵무침", tags: ["한식", "집밥", "가벼움", "매운맛"] },
+    { name: "브로콜리 무침", tags: ["한식", "집밥", "아이", "가벼움"] },
+    { name: "김자반", tags: ["한식", "집밥", "아이", "가벼움"] },
+    // --- 배달 · 외식 ---
+    { name: "치킨", tags: ["한식", "배달·외식", "든든"] },
+    { name: "피자", tags: ["양식", "배달·외식", "아이", "든든"] },
+    { name: "족발", tags: ["한식", "배달·외식", "든든"] },
+    { name: "보쌈", tags: ["한식", "배달·외식", "아이", "든든"] },
+    { name: "햄버거", tags: ["양식", "배달·외식", "아이", "든든"] },
+    { name: "떡볶이", tags: ["분식", "배달·외식", "매운맛"] },
+    { name: "순대", tags: ["분식", "배달·외식", "아이"] },
+    { name: "초밥", tags: ["일식", "배달·외식", "가벼움"] },
+    { name: "마라탕", tags: ["중식", "배달·외식", "든든", "매운맛"] },
+    { name: "마라샹궈", tags: ["중식", "배달·외식", "든든", "매운맛"] },
+    { name: "쌀국수", tags: ["배달·외식", "아이", "가벼움"] }, // 베트남 음식이라 음식 종류 태그 없음 (꼬리표도 안 붙음)
+    { name: "삼겹살", tags: ["한식", "배달·외식", "든든"] },
+    { name: "회", tags: ["한식", "배달·외식", "가벼움"] },
+    { name: "곱창", tags: ["한식", "배달·외식", "든든"] },
+    { name: "찜닭", tags: ["한식", "배달·외식", "든든", "매운맛"] },
+    { name: "닭발", tags: ["한식", "배달·외식", "매운맛"] },
+    // 한식
+    { name: "설렁탕", tags: ["한식", "배달·외식", "아이", "든든"] },
+    { name: "순댓국", tags: ["한식", "배달·외식", "든든"] },
+    { name: "돼지국밥", tags: ["한식", "배달·외식", "든든"] },
+    { name: "아귀찜", tags: ["한식", "배달·외식", "든든", "매운맛"] },
+    { name: "냉면", tags: ["한식", "배달·외식", "가벼움"] },
+    { name: "낙곱새", tags: ["한식", "배달·외식", "든든", "매운맛"] },
+    { name: "돼지갈비", tags: ["한식", "배달·외식", "든든"] },
+    { name: "육회", tags: ["한식", "배달·외식", "가벼움"] },
+    { name: "회덮밥", tags: ["한식", "배달·외식", "가벼움", "매운맛"] },
+    { name: "해물탕", tags: ["한식", "배달·외식", "든든", "매운맛"] },
+    // 양식
+    { name: "포케", tags: ["양식", "배달·외식", "가벼움"] },
+    { name: "부리또", tags: ["양식", "배달·외식", "든든"] },
+    { name: "바비큐 폭립", tags: ["양식", "배달·외식", "든든"] },
+    { name: "라자냐", tags: ["양식", "배달·외식", "아이", "든든"] },
+    // 중식
+    { name: "탕수육", tags: ["중식", "배달·외식", "아이", "든든"] },
+    { name: "양장피", tags: ["중식", "배달·외식", "가벼움"] },
+    { name: "팔보채", tags: ["중식", "배달·외식", "든든"] },
+    { name: "라조기", tags: ["중식", "배달·외식", "든든", "매운맛"] },
+    { name: "훠궈", tags: ["중식", "배달·외식", "든든", "매운맛"] },
+    { name: "양꼬치", tags: ["중식", "배달·외식", "든든"] },
+    { name: "멘보샤", tags: ["중식", "배달·외식", "아이"] },
+    { name: "우육면", tags: ["중식", "배달·외식", "든든"] },
+    // 일식
+    { name: "라멘", tags: ["일식", "배달·외식", "든든"] },
+    { name: "텐동", tags: ["일식", "배달·외식", "든든"] },
+    { name: "장어덮밥", tags: ["일식", "배달·외식", "든든"] },
+    { name: "규카츠", tags: ["일식", "배달·외식", "든든"] },
+    { name: "캘리포니아롤", tags: ["일식", "배달·외식", "아이", "가벼움"] },
+    { name: "마제소바", tags: ["일식", "배달·외식", "든든", "매운맛"] },
+    { name: "야키토리", tags: ["일식", "배달·외식", "든든"] },
+    { name: "타코야키", tags: ["일식", "배달·외식", "아이"] },
+    // 분식
+    { name: "쫄면", tags: ["분식", "배달·외식", "가벼움", "매운맛"] },
+    { name: "모둠튀김", tags: ["분식", "배달·외식", "아이"] },
+    { name: "충무김밥", tags: ["분식", "배달·외식", "가벼움", "매운맛"] },
+    { name: "닭강정", tags: ["분식", "배달·외식", "아이", "든든"] },
+    { name: "순대볶음", tags: ["분식", "배달·외식", "든든", "매운맛"] },
+    { name: "칼국수", tags: ["분식", "배달·외식", "아이", "든든"] },
+    { name: "불닭볶음면", tags: ["분식", "집밥", "매운맛"] },
+    { name: "틈새라면", tags: ["분식", "집밥", "매운맛"] },
+    { name: "불족발", tags: ["한식", "배달·외식", "매운맛", "든든"] },
+    { name: "아라비아따 파스타", tags: ["양식", "집밥", "매운맛"] },
+    { name: "탄탄면", tags: ["중식", "집밥", "매운맛"] },
+    { name: "마라반", tags: ["중식", "배달·외식", "매운맛"] },
+    { name: "알탕", tags: ["한식", "집밥", "매운맛", "든든"] },
+    { name: "매운탕", tags: ["한식", "집밥", "매운맛"] },
+    { name: "뼈해장국", tags: ["한식", "배달·외식", "매운맛", "든든"] },
+    { name: "고추장불고기", tags: ["한식", "집밥", "매운맛", "든든"] },
+    { name: "해물찜", tags: ["한식", "배달·외식", "매운맛", "든든"] },
+  ];
+
+  // 필터 칩 (label = 화면에 보이는 이름, tag = 메뉴 tags에서 찾을 값, ALL = 전체)
+  const ALL = "전체";
+  const FILTERS = [
+    { label: "전체", tag: ALL },
+    { label: "든든하게", tag: "든든" },
+    { label: "가볍게", tag: "가벼움" },
+    { label: "매운 게 땡겨", tag: "매운맛" },
+  ];
+
+  // 후보 버튼 꼬리표로 보여줄 음식 종류
+  const KINDS = ["한식", "중식", "양식", "일식", "분식"];
+  function kindOf(name) {
+    const m = MENUS.find((menu) => menu.name === name);
+    return m ? m.tags.find((t) => KINDS.includes(t)) : undefined;
+  }
+
+  // localStorage 저장 키 (바꾸면 기존 기록과 분리됩니다)
+  const STORAGE_KEY = "dinnerPickerHistory";
+  const MEMO_KEY = "mealMemo"; // { "YYYY-MM-DD": ["메모1", ...] }
+  const CUSTOM_MENU_KEY = "customMenus"; // [{ name, tags }]
+
+  // 직접 추가한 메뉴를 MENUS에 합친다 (이름이 이미 있으면 제외)
+  function loadCustomMenus() {
+    try {
+      return JSON.parse(localStorage.getItem(CUSTOM_MENU_KEY)) || [];
+    } catch (e) {
+      return [];
+    }
+  }
+  loadCustomMenus().forEach((m) => {
+    if (m && m.name && !MENUS.some((x) => x.name === m.name)) {
+      MENUS.push({ name: m.name, tags: Array.isArray(m.tags) ? m.tags : ["집밥"] });
+    }
+  });
+
+  const EMOJIS = ["🍲", "🥘", "🍳", "🍚", "🥢", "🍛"];
+
+  const resultEl = document.getElementById("result");
+  const pickBtn = document.getElementById("pickBtn");
+  const doneBtn = document.getElementById("doneBtn");
+  const clearBtn = document.getElementById("clearBtn");
+  const clearMemoBtn = document.getElementById("clearMemoBtn");
+  const themeToggle = document.getElementById("themeToggle");
+  const toastEl = document.getElementById("toast");
+
+  const customInput = document.getElementById("customInput");
+  const addMenuBtn = document.getElementById("addMenuBtn");
+
+  const calendarEl = document.getElementById("calendar");
+  const monthLabelEl = document.getElementById("monthLabel");
+  const dayPanelEl = document.getElementById("dayPanel");
+
+  // 한 번에 보여줄 후보 개수
+  const CANDIDATE_COUNT = 3;
+
+  // 최근에 먹은 메뉴는 후보에서 제외 (최근 기록 4끼, 필터와 상관없이 항상 적용)
+  const RECENT_EXCLUDE = 4;
+
+  const filtersEl = document.getElementById("filters");
+
+  let candidates = []; // 지금 화면에 떠 있는 후보들 (메뉴 이름)
+  let selected = null; // 선택된 후보 메뉴 이름
+  let activeFilter = ALL; // 선택된 필터 칩
+
+  // 달력 상태: 보고 있는 달, 눌러서 연 날짜
+  const now = new Date();
+  let viewYear = now.getFullYear();
+  let viewMonth = now.getMonth(); // 0~11
+  let selectedDate = null; // "YYYY-MM-DD"
+
+  function loadHistory() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveHistory(history) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+  }
+
+  function loadMemos() {
+    try {
+      return JSON.parse(localStorage.getItem(MEMO_KEY)) || {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveMemos(memos) {
+    localStorage.setItem(MEMO_KEY, JSON.stringify(memos));
+  }
+
+  function dateKey(y, m, d) {
+    return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  }
+
+  // 사용자 기기 기준 오늘 날짜 (YYYY-MM-DD)
+  function todayString() {
+    const d = new Date();
+    return dateKey(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  function formatDate(str) {
+    const [y, m, d] = str.split("-").map(Number);
+    const date = new Date(y, m - 1, d);
+    const days = ["일", "월", "화", "수", "목", "금", "토"];
+    return `${m}월 ${d}일 (${days[date.getDay()]})`;
+  }
+
+  function showToast(msg) {
+    toastEl.textContent = msg;
+    toastEl.style.opacity = 1;
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(() => (toastEl.style.opacity = 0), 2000);
+  }
+
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // 기록할 메뉴: 직접 입력이 있으면 그것, 없으면 선택된 후보
+  function currentMenu() {
+    return customInput.value.trim() || selected;
+  }
+
+  function updateDoneBtn() {
+    doneBtn.disabled = !currentMenu();
+  }
+
+  function renderCandidates() {
+    resultEl.querySelectorAll(".candidate").forEach((btn) => {
+      const on = btn.dataset.menu === selected;
+      btn.classList.toggle("selected", on);
+      btn.setAttribute("aria-pressed", on);
+    });
+  }
+
+  function selectCandidate(menu) {
+    selected = menu;
+    // 후보를 고르면 직접 입력은 비운다
+    customInput.value = "";
+    customInput.classList.remove("filled");
+    renderCandidates();
+    updateDoneBtn();
+  }
+
+  function renderFilters() {
+    filtersEl.querySelectorAll(".chip").forEach((chip) => {
+      const on = chip.dataset.tag === activeFilter;
+      chip.classList.toggle("active", on);
+      chip.setAttribute("aria-pressed", on);
+    });
+  }
+
+  function buildFilters() {
+    FILTERS.forEach(({ label, tag }) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "chip";
+      chip.textContent = label;
+      chip.dataset.tag = tag;
+      chip.addEventListener("click", () => {
+        if (activeFilter !== tag) candidates = []; // 필터가 바뀌면 이전 후보 기준 중복 회피는 리셋
+        activeFilter = tag;
+        renderFilters();
+        pick();
+      });
+      filtersEl.appendChild(chip);
+    });
+  }
+
+  // 현재 필터에 맞는 메뉴 이름 목록 (이름 기준 중복 제거)
+  function filteredNames() {
+    const names = MENUS
+      .filter((m) => activeFilter === ALL || m.tags.includes(activeFilter))
+      .map((m) => m.name);
+    return [...new Set(names)];
+  }
+
+  function pick() {
+    const unique = filteredNames();
+    // 최근에 먹은 메뉴는 필터와 상관없이 항상 제외
+    const recentEaten = new Set(loadHistory().slice(0, RECENT_EXCLUDE).map((h) => h.menu));
+    const fresh = unique.filter((name) => !recentEaten.has(name));
+    if (fresh.length === 0) {
+      showToast(unique.length === 0 ? "이 필터에 해당하는 메뉴가 없어요" : "최근에 먹은 메뉴밖에 없어요. 다른 필터를 골라보세요");
+      return;
+    }
+    // 화면에 이미 떠 있는 후보와 겹치지 않게 먼저 채운다
+    let next = shuffle(fresh.filter((name) => !candidates.includes(name))).slice(0, CANDIDATE_COUNT);
+    // 3개가 안 차면 직전 후보에서 채운다 (최근에 먹은 메뉴는 여기서도 제외)
+    if (next.length < CANDIDATE_COUNT) {
+      const rest = shuffle(fresh.filter((name) => !next.includes(name)));
+      next = next.concat(rest.slice(0, CANDIDATE_COUNT - next.length));
+    }
+    candidates = next;
+    selected = null;
+
+    resultEl.innerHTML = "";
+    const hint = document.createElement("div");
+    hint.className = "hint";
+    hint.textContent = candidates.length < CANDIDATE_COUNT
+      ? `이 필터에선 지금 고를 수 있는 메뉴가 ${candidates.length}개뿐이에요`
+      : "오늘 끌리는 메뉴를 골라보세요";
+    const list = document.createElement("div");
+    list.className = "candidates";
+    const emojis = shuffle(EMOJIS);
+    candidates.forEach((menu, i) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "candidate";
+      btn.dataset.menu = menu;
+      const e = document.createElement("span");
+      e.className = "emoji";
+      e.textContent = emojis[i % emojis.length];
+      const m = document.createElement("span");
+      m.textContent = menu;
+      btn.append(e, m);
+      const kind = kindOf(menu);
+      if (kind) {
+        const k = document.createElement("span");
+        k.className = "kind";
+        k.textContent = kind;
+        btn.append(k);
+      }
+      const c = document.createElement("span");
+      c.className = "check";
+      c.textContent = "✔";
+      btn.append(c);
+      btn.addEventListener("click", () => selectCandidate(menu));
+      list.appendChild(btn);
+    });
+    resultEl.append(hint, list);
+    resultEl.classList.remove("pop");
+    void resultEl.offsetWidth; // 애니메이션 재시작
+    resultEl.classList.add("pop");
+
+    renderCandidates();
+    updateDoneBtn();
+  }
+
+  function markDone() {
+    const menu = currentMenu();
+    if (!menu) return;
+    const history = loadHistory();
+    history.unshift({ menu, date: todayString() });
+    saveHistory(history);
+    renderCalendar();
+    renderDayPanel();
+    showToast(`'${menu}' 기록 완료! 맛있게 드셨나요? 😋`);
+
+    // 같은 메뉴가 실수로 두 번 기록되지 않게 선택/입력 초기화
+    selected = null;
+    customInput.value = "";
+    customInput.classList.remove("filled");
+    renderCandidates();
+    updateDoneBtn();
+  }
+
+  // ===== 먹은 기록 달력 =====
+  function renderCalendar() {
+    const history = loadHistory();
+    const memos = loadMemos();
+    // 기록(history)이나 메모가 있는 날짜
+    const marked = new Set(history.map((h) => h.date));
+    Object.keys(memos).forEach((k) => {
+      if (memos[k] && memos[k].length) marked.add(k);
+    });
+    const today = todayString();
+
+    monthLabelEl.textContent = `${viewYear}년 ${viewMonth + 1}월`;
+    calendarEl.innerHTML = "";
+    ["일", "월", "화", "수", "목", "금", "토"].forEach((w, i) => {
+      const el = document.createElement("div");
+      el.className = "cal-week" + (i === 0 ? " sun" : i === 6 ? " sat" : "");
+      el.textContent = w;
+      calendarEl.appendChild(el);
+    });
+    const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+    const lastDate = new Date(viewYear, viewMonth + 1, 0).getDate();
+    for (let i = 0; i < firstDay; i++) {
+      calendarEl.appendChild(document.createElement("div"));
+    }
+    for (let d = 1; d <= lastDate; d++) {
+      const key = dateKey(viewYear, viewMonth, d);
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "cal-day";
+      btn.dataset.date = key;
+      btn.textContent = d;
+      if (key === today) btn.classList.add("today");
+      if (key === selectedDate) btn.classList.add("selected");
+      if (marked.has(key)) {
+        const dot = document.createElement("span");
+        dot.className = "dot";
+        btn.appendChild(dot);
+      }
+      btn.addEventListener("click", () => {
+        // 같은 날짜를 다시 누르면 패널을 닫는다
+        selectedDate = selectedDate === key ? null : key;
+        renderCalendar();
+        renderDayPanel();
+      });
+      calendarEl.appendChild(btn);
+    }
+    clearBtn.style.visibility = history.length ? "visible" : "hidden";
+  }
+
+  function renderDayPanel() {
+    if (!selectedDate) {
+      dayPanelEl.hidden = true;
+      dayPanelEl.innerHTML = "";
+      return;
+    }
+    const date = selectedDate;
+    const eaten = loadHistory().filter((h) => h.date === date);
+    const memoList = loadMemos()[date] || [];
+
+    dayPanelEl.hidden = false;
+    dayPanelEl.innerHTML = "";
+    const title = document.createElement("h3");
+    title.textContent = formatDate(date);
+    const ul = document.createElement("ul");
+    eaten.forEach((h) => {
+      const li = document.createElement("li");
+      const t = document.createElement("span");
+      t.className = "text";
+      t.textContent = `🍽️ ${h.menu}`;
+      li.appendChild(t);
+      ul.appendChild(li);
+    });
+    memoList.forEach((memo, i) => {
+      const li = document.createElement("li");
+      const t = document.createElement("span");
+      t.className = "text";
+      t.textContent = `📝 ${memo}`;
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "btn-del";
+      del.textContent = "×";
+      del.setAttribute("aria-label", "메모 삭제");
+      del.addEventListener("click", () => deleteMemo(date, i));
+      li.append(t, del);
+      ul.appendChild(li);
+    });
+    if (!eaten.length && !memoList.length) {
+      const li = document.createElement("li");
+      li.className = "empty";
+      li.textContent = "이 날은 아직 기록이 없어요";
+      ul.appendChild(li);
+    }
+
+    const row = document.createElement("div");
+    row.className = "memo-row";
+    const input = document.createElement("input");
+    input.type = "text";
+    input.maxLength = 50;
+    input.placeholder = "메모 쓰기 (예: 점심에 김밥)";
+    input.autocomplete = "off";
+    const add = document.createElement("button");
+    add.type = "button";
+    add.className = "btn-memo";
+    add.textContent = "추가";
+    const submit = () => {
+      if (addMemo(date, input.value)) {
+        dayPanelEl.querySelector(".memo-row input").focus();
+      }
+    };
+    add.addEventListener("click", submit);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.isComposing) submit();
+    });
+    row.append(input, add);
+    dayPanelEl.append(title, ul, row);
+  }
+
+  function addMemo(date, text) {
+    const memo = text.trim();
+    if (!memo) return false;
+    const memos = loadMemos();
+    (memos[date] = memos[date] || []).push(memo);
+    saveMemos(memos);
+    renderCalendar();
+    renderDayPanel();
+    return true;
+  }
+
+  function deleteMemo(date, index) {
+    const memos = loadMemos();
+    if (!memos[date]) return;
+    memos[date].splice(index, 1);
+    if (memos[date].length === 0) delete memos[date];
+    saveMemos(memos);
+    renderCalendar();
+    renderDayPanel();
+  }
+
+  function changeMonth(delta) {
+    viewMonth += delta;
+    if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+    if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+    renderCalendar();
+  }
+
+  // 직접 입력한 메뉴를 후보 목록(MENUS)에 추가하고 저장
+  function addCustomMenu() {
+    const name = customInput.value.trim();
+    if (!name) {
+      showToast("추가할 메뉴를 먼저 입력해 주세요");
+      return;
+    }
+    if (MENUS.some((m) => m.name === name)) {
+      showToast(`'${name}'은(는) 이미 목록에 있어요`);
+      return;
+    }
+    const menu = { name, tags: ["집밥"] };
+    MENUS.push(menu);
+    const saved = loadCustomMenus().filter((m) => m && m.name !== name);
+    saved.push(menu);
+    localStorage.setItem(CUSTOM_MENU_KEY, JSON.stringify(saved));
+    showToast(`'${name}' 목록에 추가! 이제 후보로도 나와요`);
+  }
+
+  pickBtn.addEventListener("click", pick);
+  addMenuBtn.addEventListener("click", addCustomMenu);
+  document.getElementById("prevMonth").addEventListener("click", () => changeMonth(-1));
+  document.getElementById("nextMonth").addEventListener("click", () => changeMonth(1));
+  doneBtn.addEventListener("click", markDone);
+  customInput.addEventListener("input", () => {
+    const filled = customInput.value.trim() !== "";
+    customInput.classList.toggle("filled", filled);
+    // 직접 입력하면 후보 선택 해제
+    if (filled && selected) {
+      selected = null;
+      renderCandidates();
+    }
+    updateDoneBtn();
+  });
+  customInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.isComposing) markDone();
+  });
+  clearBtn.addEventListener("click", () => {
+    // '오늘 이거 먹었어' 기록만 지운다 (메모는 남음)
+    if (confirm("먹은 기록을 모두 지울까요? (메모는 남아요)")) {
+      localStorage.removeItem(STORAGE_KEY);
+      renderCalendar();
+      renderDayPanel();
+    }
+  });
+  clearMemoBtn.addEventListener("click", () => {
+    // 메모만 지운다 (먹은 기록은 남음)
+    if (confirm("메모를 모두 지울까요? (먹은 기록은 남아요)")) {
+      localStorage.removeItem(MEMO_KEY);
+      renderCalendar();
+      renderDayPanel();
+    }
+  });
+
+  // 라이트/다크 모드 (선택은 저장되어 유지된다)
+  const THEME_KEY = "mealPickerTheme";
+  function applyTheme(theme) {
+    document.documentElement.dataset.appTheme = theme;
+    localStorage.setItem(THEME_KEY, theme);
+    themeToggle.textContent = theme === "dark" ? "☀️" : "🌙";
+    themeToggle.setAttribute("aria-label", theme === "dark" ? "라이트모드로 전환" : "다크모드로 전환");
+  }
+  themeToggle.addEventListener("click", () => {
+    applyTheme(document.documentElement.dataset.appTheme === "dark" ? "light" : "dark");
+  });
+  applyTheme(localStorage.getItem(THEME_KEY) || "light");
+
+  // 위젯에서 저장된 상태가 늦게 도착하면 테마를 다시 맞춰준다
+  window.addEventListener("hatch-widget-state", (e) => {
+    const kv = ((e && e.detail && e.detail.state) || {}).__kv || {};
+    const saved = kv[THEME_KEY];
+    if ((saved === "dark" || saved === "light") && document.documentElement.dataset.appTheme !== saved) {
+      document.documentElement.dataset.appTheme = saved;
+      themeToggle.textContent = saved === "dark" ? "☀️" : "🌙";
+      themeToggle.setAttribute("aria-label", saved === "dark" ? "라이트모드로 전환" : "다크모드로 전환");
+    }
+  });
+
+  buildFilters();
+  renderFilters();
+  renderCalendar();
+  renderDayPanel();
+</script>
+</body>
+</html>
